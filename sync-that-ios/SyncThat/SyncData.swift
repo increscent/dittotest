@@ -9,9 +9,11 @@ import Foundation
 import DittoSwift
 
 class SyncData: ObservableObject {
-    private var ditto: Ditto = Ditto(identity: .onlinePlayground(appID: "c9fed9d4-3ec4-4cd4-84a1-1d8dbf36a4c2"
-                                                                 , token: "7ccec00c-d0fd-4935-92c6-d86447a287b7", enableDittoCloudSync: true))
-    private var observer: DittoStoreObserver?
+    private var ditto: Ditto = Ditto(identity: .onlinePlayground(
+                appID: Constants.appID,
+                token: Constants.playgroundAuthToken,
+                enableDittoCloudSync: true))
+        private var observer: DittoStoreObserver?
     
     @Published var wats: Int = 0
     
