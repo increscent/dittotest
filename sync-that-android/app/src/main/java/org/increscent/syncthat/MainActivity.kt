@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,11 @@ class MainActivity : ComponentActivity() {
     private var ditto: Ditto? = null
     private var count: MutableState<Int> = mutableIntStateOf(0)
 
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            this.ditto?.refreshPermissions()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -50,8 +56,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        checkPermissions()
-
         try {
             DittoLogger.minimumLogLevel = DittoLogLevel.DEBUG
             val androidDependencies = DefaultAndroidDittoDependencies(applicationContext)
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
             )
             val ditto = Ditto(androidDependencies, identity)
             this.ditto = ditto
+            this.checkPermissions()
             ditto.disableSyncWithV3()
             ditto.startSync()
 
@@ -88,9 +93,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkPermissions() {
-        val missing = DittoSyncPermissions(this).missingPermissions()
-        if (missing.isNotEmpty()) {
-            this.requestPermissions(missing, 0)
+        val missingPermissions =
+            DittoSyncPermissions(this).missingPermissions().takeIf { it.isNotEmpty() }
+        missingPermissions?.let {
+            this.requestPermissionLauncher.launch(it)
         }
     }
 
