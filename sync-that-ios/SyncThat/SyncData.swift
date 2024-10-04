@@ -25,6 +25,8 @@ class SyncData: ObservableObject {
                 var config = DittoTransportConfig()
                 config.enableAllPeerToPeer()
                 self.ditto.transportConfig = config
+                
+                self.ditto.delegate = self
 
                 try self.ditto.disableSyncWithV3()
                 try self.ditto.startSync()
@@ -55,5 +57,11 @@ class SyncData: ObservableObject {
                 print("Ditto error: \(err.localizedDescription)")
             }
         }
+    }
+}
+
+extension SyncData: DittoDelegate {
+    public func dittoTransportConditionDidChange(ditto: DittoSwift.Ditto, condition: DittoSwift.DittoTransportCondition, subsystem: DittoSwift.DittoConditionSource) {
+        print("dittoTransportConditionDidChange \(subsystem) \(condition)")
     }
 }
