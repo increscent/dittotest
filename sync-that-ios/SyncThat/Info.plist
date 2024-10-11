@@ -3,15 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Uses Bluetooth to connect and sync with nearby devices
-
-Uses Bluetooth to connect and sync with nearby devices
-
-</string>
+	<string>This app uses Bluetooth to connect and sync with other nearby apps</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>Uses Bluetooth to connect and sync with nearby devices</string>
+	<string>This app uses Bluetooth to connect and sync with other nearby apps</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Uses WiFi to connect and sync with nearby devices</string>
+	<string>This app uses the local network to sync with other nearby apps</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_http-alt._tcp.</string>
