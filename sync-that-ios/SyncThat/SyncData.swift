@@ -25,6 +25,8 @@ class SyncData: ObservableObject {
                 var config = DittoTransportConfig()
                 config.enableAllPeerToPeer()
                 self.ditto.transportConfig = config
+                
+                self.ditto.delegate = self
 
                 try self.ditto.disableSyncWithV3()
                 try self.ditto.startSync()
@@ -55,5 +57,65 @@ class SyncData: ObservableObject {
                 print("Ditto error: \(err.localizedDescription)")
             }
         }
+    }
+}
+
+extension SyncData: DittoDelegate {
+    public func dittoTransportConditionDidChange(
+        ditto: DittoSwift.Ditto,
+        condition: DittoSwift.DittoTransportCondition,
+        subsystem: DittoSwift.DittoConditionSource)
+    {
+        switch condition {
+        case .Unknown:
+            // TODO: What is this??
+            break
+        case .Ok:
+            // TODO
+            break
+        case .GenericFailure:
+            // TODO: What is this??
+            break
+        case .AppInBackground:
+            // TODO: How is this useful?
+            break
+        case .CannotEstablishConnection:
+            // TODO: How is this useful?
+            break
+        case .NoBleHardware:
+            // TODO: Does this actually work??
+            break
+        case .TemporarilyUnavailable:
+            // TODO: What is this??
+            break
+        case .TcpListenFailure:
+            // TODO: Is this a permissions issue or something else??
+            break
+            
+        case .NoBleCentralPermission:
+            fallthrough
+        case .NoBlePeripheralPermission:
+            // This case and .NoBleCentralPermission go together; on Apple devices they are the same permission
+            // Prompt the user to go to Settings and allow this app to use Bluetooth
+//            bluetoothPermissionDeniedAlert()
+            break
+        case .BleDisabled:
+            // Prompt the user to re-enable Bluetooth
+//            bluetoothDisabledAlert()
+            break
+        case .MdnsFailure:
+            // Prompt the user to go to Settings and allow this app to use "Local Network"
+//            localNetworkPermissionDeniedAlert()
+            break
+        case .WifiDisabled:
+            // Prompt the user to re-enable WiFi
+//            wifiDisabledAlert()
+            break
+            
+        @unknown default:
+            fatalError()
+        }
+        
+        print("dittoTransportConditionDidChange \(subsystem) \(condition)")
     }
 }
