@@ -17,19 +17,19 @@ mod constants;
     about = "DittoTest Application"
 )]
 struct Args {
-    #[clap(long, help = "Enable debug logging", default_value_t = false)]
+    #[clap(long, help = "Enable debug logging")]
     debug: bool,
 
-    #[clap(long, help = "Enable or disable cloud sync", default_value_t = true)]
+    #[clap(long, help = "Enable or disable cloud sync")]
     cloud_sync: bool,
 
     #[clap(long, value_name = "URL", help = "Set a custom authentication URL")]
     custom_auth_url: Option<String>,
 
-    #[clap(long, help = "Enable P2P BLE communication", default_value_t = true)]
+    #[clap(long, help = "Enable P2P BLE communication")]
     p2p_ble_enabled: bool,
 
-    #[clap(long, help = "Enable P2P LAN communication", default_value_t = true)]
+    #[clap(long, help = "Enable P2P LAN communication")]
     p2p_lan_enabled: bool,
 }
 
