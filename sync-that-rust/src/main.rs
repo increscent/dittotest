@@ -71,6 +71,8 @@ async fn main() -> anyhow::Result<()> {
         })?
         .build()?;
 
+    ditto.disable_sync_with_v3().unwrap();
+
     // Start syncing with peers
     ditto.start_sync()?;
 
