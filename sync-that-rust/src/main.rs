@@ -31,6 +31,12 @@ struct Args {
 
     #[clap(long, help = "Enable P2P LAN communication")]
     p2p_lan_enabled: bool,
+
+    #[clap(long, help = "TCP Port to Listen")]
+    tcp_listen_port: Option<u16>,
+
+    #[clap(long, help = "TCP Port to Connect")]
+    tcp_connect_port: Option<u16>,
 }
 
 #[tokio::main]
@@ -67,6 +73,14 @@ async fn main() -> anyhow::Result<()> {
             let mut transport_config = TransportConfig::new();
             transport_config.peer_to_peer.bluetooth_le.enabled = p2p_ble_enabled;
             transport_config.peer_to_peer.lan.enabled = p2p_lan_enabled;
+            if let Some(port) = args.tcp_listen_port {
+                transport_config.listen.tcp.enabled = true;
+                transport_config.listen.tcp.interface_ip = "127.0.0.1".to_string();
+                transport_config.listen.tcp.port = port;
+            }
+            if let Some(port) = args.tcp_connect_port {
+                transport_config.connect.tcp_servers.insert(format!("127.0.0.1:{port}"));
+            }
             transport_config
         })?
         .build()?;

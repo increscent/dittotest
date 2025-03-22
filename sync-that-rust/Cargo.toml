@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.89"
 clap = { version = "4.0", features = ["derive"] }
-dittolive-ditto = "4.10.0"
+dittolive-ditto = { path = "/Users/robertwilliams/source/ditto/rust/dittolive-ditto" }
+#dittolive-ditto = "4.10.0"
 serde_json = "1.0.128"
 tokio = "1.40.0"
