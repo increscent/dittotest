@@ -23,6 +23,12 @@ struct Args {
     #[clap(long, help = "Enable or disable cloud sync")]
     cloud_sync: bool,
 
+    #[clap(long, help = "Use shared key authentication")]
+    shared_key: bool,
+
+    #[clap(long, help = "Use offline playground authentication")]
+    offline_playground: bool,
+
     #[clap(long, value_name = "URL", help = "Set a custom authentication URL")]
     custom_auth_url: Option<String>,
 
@@ -37,6 +43,9 @@ struct Args {
 
     #[clap(long, help = "TCP Port to Connect")]
     tcp_connect_port: Option<u16>,
+
+    #[clap(long, help = "No stdin (for running in background)")]
+    no_stdin: bool,
 }
 
 #[tokio::main]
@@ -57,10 +66,24 @@ async fn main() -> anyhow::Result<()> {
     let p2p_lan_enabled = args.p2p_lan_enabled;
 
     // Initialize Ditto
-    let ditto = Ditto::builder()
+    let mut ditto = Ditto::builder()
         .with_root(Arc::new(PersistentRoot::from_current_exe()?))
-        .with_minimum_log_level(logging_level)
-        .with_identity(|ditto_root| {
+        .with_minimum_log_level(logging_level);
+
+    if args.shared_key {
+        ditto = ditto.with_identity(|ditto_root| {
+            identity::SharedKey::new(
+                ditto_root,
+                app_id,
+                constants::SHARED_KEY
+                    .expect("SHARED_KEY constant is required when using the --shared-key option"),
+            )
+        })?;
+    } else if args.offline_playground {
+        ditto = ditto
+            .with_identity(|ditto_root| identity::OfflinePlayground::new(ditto_root, app_id))?;
+    } else {
+        ditto = ditto.with_identity(|ditto_root| {
             identity::OnlinePlayground::new(
                 ditto_root,
                 app_id,
@@ -68,7 +91,10 @@ async fn main() -> anyhow::Result<()> {
                 cloud_sync,
                 custom_auth_url,
             )
-        })?
+        })?;
+    }
+
+    let ditto = ditto
         .with_transport_config(|_identity| -> TransportConfig {
             let mut transport_config = TransportConfig::new();
             transport_config.peer_to_peer.bluetooth_le.enabled = p2p_ble_enabled;
@@ -79,11 +105,21 @@ async fn main() -> anyhow::Result<()> {
                 transport_config.listen.tcp.port = port;
             }
             if let Some(port) = args.tcp_connect_port {
-                transport_config.connect.tcp_servers.insert(format!("127.0.0.1:{port}"));
+                transport_config
+                    .connect
+                    .tcp_servers
+                    .insert(format!("127.0.0.1:{port}"));
             }
+            println!("{transport_config:?}");
             transport_config
         })?
         .build()?;
+
+    constants::DITTO_LICENSE.map(|license| {
+        ditto
+            .set_offline_only_license_token(license)
+            .expect("Valid offline ditto license required if using --shared-key option")
+    });
 
     ditto.disable_sync_with_v3().unwrap();
 
@@ -101,9 +137,20 @@ async fn main() -> anyhow::Result<()> {
         .sync()
         .register_subscription("SELECT * FROM wats", None);
 
+    if args.no_stdin {
+        loop {}
+    }
+
     let stdin = io::stdin();
     let reader = io::BufReader::new(stdin);
     let mut lines = reader.lines();
+
+    let mut connect_to: Option<String> = None;
+    if let Some(port) = args.tcp_connect_port {
+        connect_to = Some(format!("127.0.0.1:{port}"));
+    }
+
+    let mut i = 0;
 
     print!("Press enter to increment:");
     std::io::stdout().flush().unwrap();
@@ -125,6 +172,21 @@ async fn main() -> anyhow::Result<()> {
 
         print!("Press enter to increment:");
         std::io::stdout().flush().unwrap();
+
+        i += 1;
+        if i % 5 == 0 {
+            if i % 10 == 0 {
+                ditto.update_transport_config(|config| {
+                    config.connect.tcp_servers.clear();
+                });
+            } else {
+                if let Some(ref host) = connect_to {
+                    ditto.update_transport_config(|config| {
+                        config.connect.tcp_servers.insert(host.to_string());
+                    });
+                }
+            }
+        }
     }
 
     Ok(())
