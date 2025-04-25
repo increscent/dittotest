@@ -340,6 +340,7 @@ dependencies = [
  "bytes",
  "chrono",
  "dashmap",
+ "dittolive-ditto-base",
  "dittolive-ditto-sys",
  "dotenvy",
  "ext-trait",
@@ -364,9 +365,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "dittolive-ditto-base"
+version = "4.11.0-dev"
+dependencies = [
+ "base64",
+ "safer-ffi",
+ "serde",
+ "serde_cbor",
+ "serde_json",
+ "stabby",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "dittolive-ditto-sys"
 version = "4.11.0-dev"
 dependencies = [
+ "dittolive-ditto-base",
  "macro_rules_attribute",
  "paste",
  "safer-ffi",

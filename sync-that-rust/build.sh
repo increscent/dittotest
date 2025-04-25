@@ -5,7 +5,7 @@ set -e
 SOURCE="/Users/robertwilliams/source"
 
 pushd "$SOURCE/ditto/ffi"
-cargo build --release
+cargo build --release --features="experimental-bus"
 popd
 
 cp "$SOURCE/ditto/target/release/libdittoffi.a" "$SOURCE/dittotest/sync-that-rust/"

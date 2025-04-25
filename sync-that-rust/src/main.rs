@@ -1,4 +1,6 @@
 use clap::Parser;
+use dittolive_ditto::experimental::bus::Reliability;
+use dittolive_ditto::experimental::peer_pubkey::PeerPubkey;
 use dittolive_ditto::prelude::*;
 use dittolive_ditto::store::dql::QueryResult;
 use serde_json::json;
@@ -7,6 +9,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io;
 use tokio::io::AsyncBufReadExt;
+use tokio::time::{sleep, Duration};
 
 mod constants;
 
@@ -46,6 +49,12 @@ struct Args {
 
     #[clap(long, help = "No stdin (for running in background)")]
     no_stdin: bool,
+
+    #[clap(long, help = "Use Ditto bus")]
+    ditto_bus: bool,
+
+    #[clap(long, help = "Peer key of peer to connect to on Ditto bus")]
+    bus_peer_key: Option<String>,
 }
 
 #[tokio::main]
@@ -101,14 +110,14 @@ async fn main() -> anyhow::Result<()> {
             transport_config.peer_to_peer.lan.enabled = p2p_lan_enabled;
             if let Some(port) = args.tcp_listen_port {
                 transport_config.listen.tcp.enabled = true;
-                transport_config.listen.tcp.interface_ip = "[::]".to_string();
+                transport_config.listen.tcp.interface_ip = "127.0.0.1".to_string();
                 transport_config.listen.tcp.port = port;
             }
             if let Some(port) = args.tcp_connect_port {
                 transport_config
                     .connect
                     .tcp_servers
-                    .insert(format!("[::]:{port}"));
+                    .insert(format!("127.0.0.1:{port}"));
             }
             println!("{transport_config:?}");
             transport_config
@@ -139,6 +148,36 @@ async fn main() -> anyhow::Result<()> {
 
     if args.no_stdin {
         loop {}
+    }
+
+    println!("Peer key: {}", ditto.presence().graph().local_peer.peer_key_string);
+
+    if args.ditto_bus {
+        let _acceptor_handle = ditto
+            .bus()
+            .bind_topic("ping")
+            .reliability(Reliability::Unreliable)
+            .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
+            .finish_with(move |stream| {
+                let remote = stream.peer_pubkey();
+
+                println!("New stream opened by remote peer {remote:?}");
+            });
+
+        if let Some(peer_key_string) = args.bus_peer_key {
+            let peer = PeerPubkey::from_str(&peer_key_string).unwrap();
+
+            sleep(Duration::from_secs(5)).await;
+
+            let stream = ditto
+                .bus()
+                .connect(peer, "ping")
+                .reliability(Reliability::Unreliable)
+                .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
+                .finish_async()
+                .await?;
+            println!("{stream:?}");
+        }
     }
 
     let stdin = io::stdin();
