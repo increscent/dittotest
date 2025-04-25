@@ -3,7 +3,7 @@
 SOURCE="/Users/robertwilliams/source"
 COUNT="1"
 #ARGS="--p2p-lan-enabled"
-ARGS="--shared-key --p2p-lan-enabled --tcp-connect-port 51111"
+ARGS="--shared-key --tcp-connect-port 51111"
 
 pushd "$SOURCE/dittotest/sync-that-rust"
 cargo build

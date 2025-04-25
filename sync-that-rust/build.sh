@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SOURCE="/Users/robertwilliams/source"
 
 pushd "$SOURCE/ditto/ffi"

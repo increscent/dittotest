@@ -101,14 +101,14 @@ async fn main() -> anyhow::Result<()> {
             transport_config.peer_to_peer.lan.enabled = p2p_lan_enabled;
             if let Some(port) = args.tcp_listen_port {
                 transport_config.listen.tcp.enabled = true;
-                transport_config.listen.tcp.interface_ip = "127.0.0.1".to_string();
+                transport_config.listen.tcp.interface_ip = "[::]".to_string();
                 transport_config.listen.tcp.port = port;
             }
             if let Some(port) = args.tcp_connect_port {
                 transport_config
                     .connect
                     .tcp_servers
-                    .insert(format!("127.0.0.1:{port}"));
+                    .insert(format!("[::]:{port}"));
             }
             println!("{transport_config:?}");
             transport_config
