@@ -4,6 +4,7 @@ use dittolive_ditto::experimental::peer_pubkey::PeerPubkey;
 use dittolive_ditto::prelude::*;
 use dittolive_ditto::store::dql::QueryResult;
 use serde_json::json;
+use std::fs::{File, read_to_string};
 use std::io::Write;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -52,6 +53,12 @@ struct Args {
 
     #[clap(long, help = "Use Ditto bus")]
     ditto_bus: bool,
+
+    #[clap(long, help = "Write peer key to file")]
+    save_peer_key: Option<String>,
+
+    #[clap(long, help = "Read bus peer key to file")]
+    read_bus_peer_key: Option<String>,
 
     #[clap(long, help = "Peer key of peer to connect to on Ditto bus")]
     bus_peer_key: Option<String>,
@@ -148,35 +155,66 @@ async fn main() -> anyhow::Result<()> {
 
     if args.no_stdin {
         loop {}
+        }
+
+    if let Some(path) = args.save_peer_key {
+        let peer_key_string = ditto.presence().graph().local_peer.peer_key_string;
+        println!("Saving peer key: {peer_key_string} ({path})");
+        let mut output = File::create(path)?;
+        write!(output, "{peer_key_string}")?;
     }
 
-    println!("Peer key: {}", ditto.presence().graph().local_peer.peer_key_string);
+    let mut target_peer_key_string = args.bus_peer_key;
+
+    if let Some(path) = args.read_bus_peer_key {
+        target_peer_key_string = Some(read_to_string(path)?);
+    }
 
     if args.ditto_bus {
-        let _acceptor_handle = ditto
-            .bus()
-            .bind_topic("ping")
-            .reliability(Reliability::Unreliable)
-            .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
-            .finish_with(move |stream| {
-                let remote = stream.peer_pubkey();
-
-                println!("New stream opened by remote peer {remote:?}");
-            });
-
-        if let Some(peer_key_string) = args.bus_peer_key {
+        if let Some(peer_key_string) = target_peer_key_string {
+            // Client
             let peer = PeerPubkey::from_str(&peer_key_string).unwrap();
 
-            sleep(Duration::from_secs(5)).await;
-
-            let stream = ditto
+            loop {
+                sleep(Duration::from_secs(2)).await;
+                let stream = ditto
+                    .bus()
+                    .connect(peer.clone(), "wat")
+                    .reliability(Reliability::Reliable)
+                    .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
+                    .finish_async()
+                    .await;
+                println!("{stream:?}");
+                if let Ok(mut stream) = stream {
+                    loop {
+                        let _ = stream.tx().message("hi").try_send().unwrap();
+                        let x = stream.recv().await.expect("stream is open");
+                        println!("{x:?}");
+                        sleep(Duration::from_secs(1)).await;
+                    }
+                }
+            }
+        } else {
+            // Server
+            let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+            let handle = ditto
                 .bus()
-                .connect(peer, "ping")
-                .reliability(Reliability::Unreliable)
+                .bind_topic("wat")
+                .reliability(Reliability::Reliable)
                 .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
-                .finish_async()
-                .await?;
-            println!("{stream:?}");
+                .finish((sender, receiver));
+
+            let mut stream = handle.unwrap();
+            if let Some(mut stream) = stream.recv().await {
+                let remote = stream.peer_pubkey();
+                println!("New stream opened by remote peer {remote:?}");
+                loop {
+                    let _ = stream.tx().message("hello").try_send().unwrap();
+                    let x = stream.recv().await.expect("stream is open");
+                    println!("{x:?}");
+                    sleep(Duration::from_secs(1)).await;
+                }
+            }
         }
     }
 
