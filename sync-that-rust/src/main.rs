@@ -175,16 +175,16 @@ async fn main() -> anyhow::Result<()> {
             // Client
             let peer = PeerPubkey::from_str(&peer_key_string).unwrap();
 
-            loop {
-                sleep(Duration::from_secs(2)).await;
-                let stream = ditto
-                    .bus()
-                    .connect(peer.clone(), "wat")
-                    .reliability(Reliability::Reliable)
-                    .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
-                    .finish_async()
-                    .await;
-                println!("{stream:?}");
+            sleep(Duration::from_secs(5)).await;
+            let stream = ditto
+                .bus()
+                .connect(peer.clone(), "wat")
+                .reliability(Reliability::Reliable)
+                .on_receive_factory(tokio::sync::mpsc::unbounded_channel)
+                .finish_async()
+                .await;
+            println!("{stream:?}");
+            tokio::spawn(async move {
                 if let Ok(mut stream) = stream {
                     loop {
                         let _ = stream.tx().message("hi").try_send().unwrap();
@@ -193,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
                         sleep(Duration::from_secs(1)).await;
                     }
                 }
-            }
+            });
         } else {
             // Server
             let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
